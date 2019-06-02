@@ -275,7 +275,7 @@ func main() {
 
 	r := mux.NewRouter()
 
-	snmprouter := r.PathPrefix("/snmp/{snmp_version}/{target}").Subrouter()
+	snmprouter := r.PathPrefix("/api/v1/snmp/{snmp_version}/{target}").Subrouter()
 
 	snmprouter.Handle("", AddSnmpContext(GetHandler)).Methods(http.MethodGet)
 	snmprouter.Handle("/{oid}", AddSnmpContext(GetHandler)).Methods(http.MethodGet)
