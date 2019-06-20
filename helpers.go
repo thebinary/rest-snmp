@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -63,13 +64,19 @@ func AddSnmpContext(next http.HandlerFunc) http.Handler {
 			sversion = gosnmp.Version2c
 		default:
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Unknown SNMP version"))
+			_, err := w.Write([]byte("Unknown SNMP version"))
+			if err != nil {
+				log.Printf("[ERR] http write error")
+			}
 			return
 		}
 
 		if scommunity == "" {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("SNMP Community undefined"))
+			_, err := w.Write([]byte("SNMP Community undefined"))
+			if err != nil {
+				log.Printf("[ERR] http write error")
+			}
 			return
 		}
 
@@ -81,7 +88,10 @@ func AddSnmpContext(next http.HandlerFunc) http.Handler {
 		err := g.Connect()
 		if err != nil {
 			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(err.Error()))
+			_, err := w.Write([]byte(err.Error()))
+			if err != nil {
+				log.Printf("[ERR] http write error")
+			}
 			return
 		}
 
