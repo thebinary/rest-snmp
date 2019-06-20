@@ -56,7 +56,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// Request for combination of fields and indexes
 			fieldsRequest := GetFieldsRequest{}
-			json.NewDecoder(r.Body).Decode(&fieldsRequest)
+			err := json.NewDecoder(r.Body).Decode(&fieldsRequest)
+			if err != nil {
+				log.Printf("[ERR] decoding request json")
+			}
 			fields := fieldsRequest.Fields
 			indexes := fieldsRequest.Indexes
 			numIndexes := len(indexes)
@@ -71,7 +74,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	} else if baseOid, ok := vars["base_oid"]; ok {
 		index := vars["index"]
 		fieldsRequest := GetFieldsRequest{}
-		json.NewDecoder(r.Body).Decode(&fieldsRequest)
+		err := json.NewDecoder(r.Body).Decode(&fieldsRequest)
+		if err != nil {
+			log.Printf("[ERR] decoding request json")
+		}
 		fields := fieldsRequest.Fields
 
 		oids = make([]string, len(fields))
@@ -81,7 +87,10 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&oidlist); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("oids missing"))
+			_, err := w.Write([]byte("oids missing"))
+			if err != nil {
+				log.Printf("[ERR] http write error")
+			}
 			return
 		}
 		oids = oidlist.Oids
@@ -89,19 +98,28 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(oids) <= 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Nothing to get"))
+		_, err := w.Write([]byte("Nothing to get"))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 
 	result, err := g.Get(oids)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(SanitizeResultVariables(&result.Variables))
+	err = json.NewEncoder(w).Encode(SanitizeResultVariables(&result.Variables))
+	if err != nil {
+		log.Printf("[ERR] encoding json")
+	}
 	return
 }
 
@@ -116,12 +134,18 @@ func WalkHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := g.WalkAll(rootOid)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(SanitizeResultVariables(&result))
+	err = json.NewEncoder(w).Encode(SanitizeResultVariables(&result))
+	if err != nil {
+		log.Printf("[ERR] encoding json")
+	}
 	return
 }
 
@@ -132,8 +156,10 @@ func SetHandler(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	request := SetEntryRequest{}
-	json.NewDecoder(r.Body).Decode(&request)
-
+	err := json.NewDecoder(r.Body).Decode(&request)
+	if err != nil {
+		log.Printf("[ERR] request body json decode")
+	}
 	baseOid := vars["base_oid"]
 	index := vars["index"]
 
@@ -192,7 +218,10 @@ func SetHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := g.Set(pdus)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 	if result.ErrorIndex != 0 {
@@ -202,8 +231,10 @@ func SetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(SanitizeResultVariables(&result.Variables))
-
+	err = json.NewEncoder(w).Encode(SanitizeResultVariables(&result.Variables))
+	if err != nil {
+		log.Printf("[ERR] encoding json")
+	}
 	return
 }
 
@@ -229,7 +260,10 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	getr, err := g.Get([]string{oid})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 	gpdus := getr.Variables
@@ -237,14 +271,20 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	// Does not exist
 	if gpdus[0].Type != gosnmp.Integer {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("Entry does not exist"))
+		_, err := w.Write([]byte("Entry does not exist"))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 
 	result, err := g.Set(pdus)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err := w.Write([]byte(err.Error()))
+		if err != nil {
+			log.Printf("[ERR] http write error")
+		}
 		return
 	}
 	if result.ErrorIndex != 0 {
@@ -316,7 +356,10 @@ func main() {
 	defer cancel()
 	// Doesn't block if no connections, but will otherwise wait
 	// until the timeout deadline.
-	srv.Shutdown(ctx)
+	err := srv.Shutdown(ctx)
+	if err != nil {
+		log.Println("[ERR] shutting down server")
+	}
 	// Optionally, you could run srv.Shutdown in a goroutine and block on
 	// <-ctx.Done() if your application should wait for other services
 	// to finalize based on context cancellation.
