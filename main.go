@@ -17,13 +17,6 @@ import (
 	"github.com/urfave/negroni"
 )
 
-// VarBind - snmp varbind
-type VarBind struct {
-	Name  string         `json:"name"`
-	Type  gosnmp.Asn1BER `json:"type"`
-	Value interface{}    `json:"value"`
-}
-
 // OidList - oids
 type OidList struct {
 	Oids []string `json:"oids"`
