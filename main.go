@@ -120,7 +120,6 @@ func GetHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERR] encoding json")
 	}
-	return
 }
 
 // WalkHandler - snmpwalk
@@ -146,7 +145,6 @@ func WalkHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERR] encoding json")
 	}
-	return
 }
 
 // SetHandler - snmpset
@@ -235,7 +233,6 @@ func SetHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[ERR] encoding json")
 	}
-	return
 }
 
 // DeleteHandler - snmpset with row delete
@@ -293,8 +290,6 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprint(w, "Entry deleted successfully")
-
-	return
 }
 
 const (
